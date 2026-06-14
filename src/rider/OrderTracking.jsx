@@ -5,7 +5,7 @@ import { formatPrice } from '../utils/formatPrice';
 import Loader from '../components/common/Loader';
 import Button from '../components/common/Button';
 import { FaPhone, FaMapMarkerAlt, FaCheckCircle, FaClipboardList, FaTruck } from 'react-icons/fa';
-import { updateOrderTrackingDb } from '../firebase/firestore';
+import { updateOrderTrackingDb } from '../supabase/database';
 import DeliveryMap from '../components/common/DeliveryMap';
 
 const ROUTE_PATH = [

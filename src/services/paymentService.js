@@ -1,4 +1,4 @@
-import { isMockFirebase } from '../firebase/auth';
+import { supabase, isMockSupabase } from '../supabase/supabaseClient';
 
 /**
  * Dynamically injects the Razorpay Checkout script if it is not already present.
@@ -32,7 +32,7 @@ export const initiatePayment = async ({
   onSuccess,
   onFailure
 }) => {
-  const isMock = isMockFirebase || !import.meta.env.VITE_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_KEY_ID === 'placeholder';
+  const isMock = isMockSupabase || !import.meta.env.VITE_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_KEY_ID === 'placeholder';
 
   if (isMock) {
     // Show high-fidelity simulated Razorpay overlay
@@ -123,7 +123,7 @@ const showMockRazorpayModal = ({ amount, orderId, customerName, onSuccess, onFai
       <!-- Body / Actions -->
       <div class="p-5 flex flex-col gap-4 bg-neutral-light/20">
         <div class="flex flex-col gap-1.5">
-          <span class="text-[9px] font-bold text-neutral-dark/40 uppercase tracking-wider">Payer Details</span>
+          <span class="text-[9px] font-bold text-neutral-dark/45 uppercase tracking-wider">Payer Details</span>
           <div class="p-3 bg-white border border-neutral-border/60 rounded-md flex flex-col gap-1">
             <div class="flex justify-between text-xs font-semibold">
               <span class="text-neutral-dark/45">Name</span>
@@ -189,8 +189,6 @@ const showMockRazorpayModal = ({ amount, orderId, customerName, onSuccess, onFai
     // Simulate Razorpay verification response payload
     const mockPaymentId = 'pay_' + Math.random().toString(36).substr(2, 9);
     const mockOrderId = orderId || 'order_' + Math.random().toString(36).substr(2, 9);
-    
-    // In a real environment, the signature is verification key
     const mockSignature = 'sig_' + Math.random().toString(36).substr(2, 16);
     
     onSuccess({
@@ -202,10 +200,12 @@ const showMockRazorpayModal = ({ amount, orderId, customerName, onSuccess, onFai
 };
 
 /**
- * Creates a Razorpay Order by invoking the backend Cloud Function or simulating it locally.
+ * Creates a Razorpay Order by invoking the backend Supabase Edge Function or simulating it locally.
  */
 export const createRazorpayOrderOnServer = async (amount) => {
-  if (isMockFirebase) {
+  const isMock = isMockSupabase || !import.meta.env.VITE_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_KEY_ID === 'placeholder';
+
+  if (isMock) {
     await new Promise(resolve => setTimeout(resolve, 600));
     return {
       success: true,
@@ -214,29 +214,31 @@ export const createRazorpayOrderOnServer = async (amount) => {
       currency: 'INR'
     };
   } else {
-    const { getFunctions, httpsCallable } = await import('firebase/functions');
-    const functions = getFunctions();
-    const createOrderFn = httpsCallable(functions, 'createRazorpayOrder');
-    const result = await createOrderFn({ amount });
-    return result.data;
+    const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+      body: { amount }
+    });
+    if (error) throw error;
+    return data;
   }
 };
 
 /**
- * Verifies Razorpay Payment Signature by invoking the backend Cloud Function or simulating it locally.
+ * Verifies Razorpay Payment Signature by invoking the backend Supabase Edge Function or simulating it locally.
  */
 export const verifyRazorpayPaymentOnServer = async (paymentDetails) => {
-  if (isMockFirebase) {
+  const isMock = isMockSupabase || !import.meta.env.VITE_RAZORPAY_KEY_ID || import.meta.env.VITE_RAZORPAY_KEY_ID === 'placeholder';
+
+  if (isMock) {
     await new Promise(resolve => setTimeout(resolve, 600));
     return {
       success: true,
       verified: true
     };
   } else {
-    const { getFunctions, httpsCallable } = await import('firebase/functions');
-    const functions = getFunctions();
-    const verifyPaymentFn = httpsCallable(functions, 'verifyRazorpayPayment');
-    const result = await verifyPaymentFn(paymentDetails);
-    return result.data;
+    const { data, error } = await supabase.functions.invoke('verify-razorpay-payment', {
+      body: paymentDetails
+    });
+    if (error) throw error;
+    return data;
   }
 };

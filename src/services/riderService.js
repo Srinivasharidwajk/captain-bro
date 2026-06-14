@@ -1,4 +1,4 @@
-import { getOrdersDb } from '../firebase/firestore';
+import { getOrdersDb } from '../supabase/database';
 
 export const getAssignedOrders = async (riderId) => {
   const allOrders = await getOrdersDb();

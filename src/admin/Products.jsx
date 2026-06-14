@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getProducts, createProduct, updateProduct, deleteProduct } from '../services/productService';
-import { uploadProductImage } from '../firebase/storage';
+import { uploadProductImage } from '../supabase/storage';
 import { formatPrice } from '../utils/formatPrice';
 import { CATEGORIES } from '../utils/constants';
 import Button from '../components/common/Button';

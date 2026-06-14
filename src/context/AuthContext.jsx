@@ -5,8 +5,9 @@ import {
   logoutUser, 
   resetPassword, 
   subscribeToAuth,
-  loginWithPhone 
-} from '../firebase/auth';
+  sendPhoneOtp,
+  verifyPhoneOtp
+} from '../supabase/auth';
 
 export const AuthContext = createContext();
 
@@ -76,11 +77,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginPhone = async (phone) => {
+  const loginPhone = async (phone, otp) => {
     setLoading(true);
     setError(null);
     try {
-      const userProfile = await loginWithPhone(phone);
+      const userProfile = await verifyPhoneOtp(phone, otp);
       setCurrentUser(userProfile);
       return userProfile;
     } catch (err) {
@@ -99,7 +100,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     resetPass,
-    loginPhone
+    loginPhone,
+    sendPhoneOtp
   };
 
   return (

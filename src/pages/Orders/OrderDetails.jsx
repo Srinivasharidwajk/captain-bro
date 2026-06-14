@@ -18,7 +18,7 @@ import {
   FaMotorcycle,
   FaArrowLeft
 } from 'react-icons/fa';
-import { subscribeToOrderTrackingDb } from '../../firebase/firestore';
+import { subscribeToOrderTrackingDb } from '../../supabase/database';
 import DeliveryMap from '../../components/common/DeliveryMap';
 
 export const OrderDetails = () => {

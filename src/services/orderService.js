@@ -3,7 +3,7 @@ import {
   getOrdersDb, 
   updateOrderStatusDb,
   updateOrderFieldsDb
-} from '../firebase/firestore';
+} from '../supabase/database';
 
 export const createOrder = async (orderData) => {
   return await createOrderDb(orderData);

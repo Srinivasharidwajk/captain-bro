@@ -1,22 +1,41 @@
-import { 
-  collection, 
-  getDocs, 
-  getDoc, 
-  doc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  setDoc,
-  query,
-  where,
-  orderBy 
-} from 'firebase/firestore';
-import { db } from './firebaseConfig';
-import { isMockFirebase } from './auth';
+import { supabase, isMockSupabase } from './supabaseClient';
 import { MOCK_PRODUCTS, CATEGORIES } from '../utils/constants';
 
+// Helper to convert camelCase to snake_case (with special total -> total_amount mapping)
+const camelToSnake = (str) => {
+  if (str === 'total') return 'total_amount';
+  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+};
+
+// Helper to convert snake_case to camelCase (with special total_amount -> total mapping)
+const snakeToCamel = (str) => {
+  if (str === 'total_amount') return 'total';
+  return str.replace(/([-_][a-z])/g, group => group.toUpperCase().replace('-', '').replace('_', ''));
+};
+
+const convertKeys = (obj, converter) => {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(item => convertKeys(item, converter));
+  if (typeof obj === 'object') {
+    return Object.keys(obj).reduce((acc, key) => {
+      // Don't recursively convert keys inside JSON columns like 'items'
+      if (key === 'items' && converter === snakeToCamel) {
+        acc[key] = obj[key];
+        return acc;
+      }
+      const newKey = converter(key);
+      acc[newKey] = typeof obj[key] === 'object' && key !== 'items' ? convertKeys(obj[key], converter) : obj[key];
+      return acc;
+    }, {});
+  }
+  return obj;
+};
+
+export const toSnake = (obj) => convertKeys(obj, camelToSnake);
+export const toCamel = (obj) => convertKeys(obj, snakeToCamel);
+
 // Initialize mock collections in localStorage if they don't exist
-if (isMockFirebase) {
+if (isMockSupabase) {
   if (!localStorage.getItem('mock_users')) {
     localStorage.setItem('mock_users', JSON.stringify([
       { uid: 'mock_admin', email: 'admin@wfoods.com', fullName: 'System Admin', phone: '9876543210', role: 'admin' },
@@ -46,61 +65,86 @@ if (isMockFirebase) {
 
 // ---------------- USERS CRUD ----------------
 export const getUserProfileDb = async (uid) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const users = JSON.parse(localStorage.getItem('mock_users') || '[]');
     return users.find(u => u.uid === uid) || null;
   } else {
-    const docSnap = await getDoc(doc(db, 'users', uid));
-    return docSnap.exists() ? docSnap.data() : null;
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('uid', uid)
+      .single();
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+    return toCamel(data);
+  }
+};
+
+export const getUsersDb = async () => {
+  if (isMockSupabase) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return JSON.parse(localStorage.getItem('mock_users') || '[]');
+  } else {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*');
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const createUserProfileDb = async (uid, profileData) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const users = JSON.parse(localStorage.getItem('mock_users') || '[]');
     const newProfile = { uid, ...profileData, createdAt: new Date().toISOString() };
     users.push(newProfile);
     localStorage.setItem('mock_users', JSON.stringify(users));
     return newProfile;
   } else {
-    await setDoc(doc(db, 'users', uid), {
-      ...profileData,
-      createdAt: new Date().toISOString()
-    });
+    const profile = toSnake({ uid, ...profileData, createdAt: new Date().toISOString() });
+    const { data, error } = await supabase
+      .from('users')
+      .insert([profile])
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 // ---------------- PRODUCTS CRUD ----------------
 export const getProductsDb = async () => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     await new Promise(resolve => setTimeout(resolve, 300));
     return JSON.parse(localStorage.getItem('mock_products') || '[]');
   } else {
-    const querySnapshot = await getDocs(collection(db, 'products'));
-    const products = [];
-    querySnapshot.forEach((doc) => {
-      products.push({ id: doc.id, ...doc.data() });
-    });
-    return products;
+    const { data, error } = await supabase
+      .from('products')
+      .select('*');
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const getProductByIdDb = async (id) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const products = JSON.parse(localStorage.getItem('mock_products') || '[]');
     return products.find(p => p.id === id) || null;
   } else {
-    const docRef = doc(db, 'products', id);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
-    }
-    return null;
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) return null;
+    return toCamel(data);
   }
 };
 
 export const createProductDb = async (productData) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const products = JSON.parse(localStorage.getItem('mock_products') || '[]');
     const newProduct = {
       id: 'p_' + Math.random().toString(36).substr(2, 9),
@@ -111,13 +155,22 @@ export const createProductDb = async (productData) => {
     localStorage.setItem('mock_products', JSON.stringify(products));
     return newProduct;
   } else {
-    const docRef = await addDoc(collection(db, 'products'), productData);
-    return { id: docRef.id, ...productData };
+    const product = toSnake(productData);
+    if (!product.id) {
+      product.id = 'p_' + Math.random().toString(36).substr(2, 9);
+    }
+    const { data, error } = await supabase
+      .from('products')
+      .insert([product])
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const updateProductDb = async (id, updatedData) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const products = JSON.parse(localStorage.getItem('mock_products') || '[]');
     const index = products.findIndex(p => p.id === id);
     if (index !== -1) {
@@ -127,52 +180,64 @@ export const updateProductDb = async (id, updatedData) => {
     }
     throw new Error('Product not found.');
   } else {
-    const docRef = doc(db, 'products', id);
-    await updateDoc(docRef, updatedData);
-    return { id, ...updatedData };
+    const updates = toSnake(updatedData);
+    const { data, error } = await supabase
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const deleteProductDb = async (id) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const products = JSON.parse(localStorage.getItem('mock_products') || '[]');
     const filtered = products.filter(p => p.id !== id);
     localStorage.setItem('mock_products', JSON.stringify(filtered));
     return true;
   } else {
-    const docRef = doc(db, 'products', id);
-    await deleteDoc(docRef);
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
     return true;
   }
 };
 
 // ---------------- CATEGORIES CRUD ----------------
 export const getCategoriesDb = async () => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     return JSON.parse(localStorage.getItem('mock_categories') || '[]');
   } else {
-    const snap = await getDocs(collection(db, 'categories'));
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*');
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 // ---------------- ORDERS CRUD ----------------
 export const getOrdersDb = async () => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     await new Promise(resolve => setTimeout(resolve, 300));
     return JSON.parse(localStorage.getItem('mock_orders') || '[]');
   } else {
-    const querySnapshot = await getDocs(collection(db, 'orders'));
-    const orders = [];
-    querySnapshot.forEach((doc) => {
-      orders.push({ id: doc.id, ...doc.data() });
-    });
-    return orders;
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const createOrderDb = async (orderData) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const orders = JSON.parse(localStorage.getItem('mock_orders') || '[]');
     const newOrder = {
       id: 'ord_' + Math.random().toString(36).substr(2, 9),
@@ -184,17 +249,26 @@ export const createOrderDb = async (orderData) => {
     localStorage.setItem('mock_orders', JSON.stringify(orders));
     return newOrder;
   } else {
-    const docRef = await addDoc(collection(db, 'orders'), {
+    const orderId = 'ord_' + Math.random().toString(36).substr(2, 9);
+    const order = toSnake({
+      id: orderId,
       ...orderData,
       status: 'pending',
       createdAt: new Date().toISOString()
     });
-    return { id: docRef.id, ...orderData, status: 'pending' };
+    
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([order])
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const updateOrderStatusDb = async (id, status, riderId = null) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const orders = JSON.parse(localStorage.getItem('mock_orders') || '[]');
     const index = orders.findIndex(o => o.id === id);
     if (index !== -1) {
@@ -205,16 +279,20 @@ export const updateOrderStatusDb = async (id, status, riderId = null) => {
     }
     throw new Error('Order not found.');
   } else {
-    const docRef = doc(db, 'orders', id);
-    const updates = { status };
-    if (riderId) updates.riderId = riderId;
-    await updateDoc(docRef, updates);
-    return { id, ...updates };
+    const updates = toSnake({ status, riderId });
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const updateOrderFieldsDb = async (id, fields) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const orders = JSON.parse(localStorage.getItem('mock_orders') || '[]');
     const index = orders.findIndex(o => o.id === id);
     if (index !== -1) {
@@ -224,26 +302,35 @@ export const updateOrderFieldsDb = async (id, fields) => {
     }
     throw new Error('Order not found.');
   } else {
-    const docRef = doc(db, 'orders', id);
-    await updateDoc(docRef, fields);
-    return { id, ...fields };
+    const updates = toSnake(fields);
+    const { data, error } = await supabase
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 // ---------------- ADDRESSES CRUD ----------------
 export const getAddressesDb = async (userId) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const userKey = `addresses_${userId}`;
     return JSON.parse(localStorage.getItem(userKey) || '[]');
   } else {
-    const q = query(collection(db, 'addresses'), where('userId', '==', userId));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const { data, error } = await supabase
+      .from('addresses')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const createAddressDb = async (userId, addressData) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const userKey = `addresses_${userId}`;
     const addresses = JSON.parse(localStorage.getItem(userKey) || '[]');
     const newAddr = {
@@ -255,23 +342,33 @@ export const createAddressDb = async (userId, addressData) => {
     localStorage.setItem(userKey, JSON.stringify(addresses));
     return newAddr;
   } else {
-    const docRef = await addDoc(collection(db, 'addresses'), { ...addressData, userId });
-    return { id: docRef.id, ...addressData };
+    const id = 'addr_' + Math.random().toString(36).substr(2, 9);
+    const address = toSnake({ id, ...addressData, userId });
+    const { data, error } = await supabase
+      .from('addresses')
+      .insert([address])
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 // ---------------- RIDERS CRUD ----------------
 export const getRidersDb = async () => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     return JSON.parse(localStorage.getItem('mock_riders') || '[]');
   } else {
-    const snap = await getDocs(collection(db, 'riders'));
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const { data, error } = await supabase
+      .from('riders')
+      .select('*');
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const updateRiderLocationDb = async (riderId, lat, lng, status = 'idle') => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const riders = JSON.parse(localStorage.getItem('mock_riders') || '[]');
     const index = riders.findIndex(r => r.id === riderId);
     const updatedRider = {
@@ -289,18 +386,26 @@ export const updateRiderLocationDb = async (riderId, lat, lng, status = 'idle') 
     localStorage.setItem('mock_riders', JSON.stringify(riders));
     return updatedRider;
   } else {
-    await setDoc(doc(db, 'riders', riderId), {
+    const rider = toSnake({
+      id: riderId,
       status,
       currentLatitude: lat,
       currentLongitude: lng,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    });
+    const { data, error } = await supabase
+      .from('riders')
+      .upsert(rider)
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 // ---------------- TRACKING CRUD ----------------
 export const updateOrderTrackingDb = async (orderId, lat, lng, status) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const trackingList = JSON.parse(localStorage.getItem('mock_tracking') || '[]');
     const index = trackingList.findIndex(t => t.orderId === orderId);
     const update = {
@@ -317,20 +422,30 @@ export const updateOrderTrackingDb = async (orderId, lat, lng, status) => {
     localStorage.setItem('mock_tracking', JSON.stringify(trackingList));
     // Dispatch local custom event for active tab listening
     window.dispatchEvent(new CustomEvent('mock_tracking_update', { detail: update }));
-    // Dispatch general storage event for cross-tab listening
     window.dispatchEvent(new Event('storage'));
     return update;
   } else {
-    await setDoc(doc(db, 'tracking', orderId), {
-      status,
-      coordinates: { latitude: lat, longitude: lng },
-      updatedAt: new Date().toISOString()
-    });
+    // In real mode, retrieve the order's assigned rider, and update that rider's location coordinates
+    const { data: order } = await supabase
+      .from('orders')
+      .select('rider_id')
+      .eq('id', orderId)
+      .single();
+      
+    if (order?.rider_id) {
+      await updateRiderLocationDb(
+        order.rider_id,
+        lat,
+        lng,
+        status === 'delivered' ? 'idle' : 'delivering'
+      );
+    }
+    return { orderId, status, coordinates: { latitude: lat, longitude: lng } };
   }
 };
 
 export const subscribeToOrderTrackingDb = (orderId, callback) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const handleStorageChange = (e) => {
       if (e.key === 'mock_tracking' || !e.key) {
         const trackingList = JSON.parse(localStorage.getItem('mock_tracking') || '[]');
@@ -361,30 +476,87 @@ export const subscribeToOrderTrackingDb = (orderId, callback) => {
       window.removeEventListener('mock_tracking_update', handleLocalUpdate);
     };
   } else {
-    const { onSnapshot } = import('firebase/firestore');
-    const docRef = doc(db, 'tracking', orderId);
-    return onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        callback({ orderId: docSnap.id, ...docSnap.data() });
+    let channel = null;
+    let isActive = true;
+
+    const setup = async () => {
+      const { data: order } = await supabase
+        .from('orders')
+        .select('rider_id')
+        .eq('id', orderId)
+        .single();
+        
+      if (!isActive) return;
+
+      if (order?.rider_id) {
+        // Fetch initial rider coordinate
+        const { data: rider } = await supabase
+          .from('riders')
+          .select('*')
+          .eq('id', order.rider_id)
+          .single();
+          
+        if (rider && isActive) {
+          callback({
+            orderId,
+            status: rider.status,
+            coordinates: { latitude: rider.current_latitude, longitude: rider.current_longitude },
+            updatedAt: rider.updated_at
+          });
+        }
+
+        // Listen for Postgres realtime updates
+        channel = supabase
+          .channel(`rider-tracking-${order.rider_id}`)
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'riders',
+            filter: `id=eq.${order.rider_id}`
+          }, (payload) => {
+            if (isActive) {
+              const riderData = payload.new;
+              callback({
+                orderId,
+                status: riderData.status,
+                coordinates: { latitude: riderData.current_latitude, longitude: riderData.current_longitude },
+                updatedAt: riderData.updated_at
+              });
+            }
+          })
+          .subscribe();
       }
-    });
+    };
+
+    setup();
+
+    return () => {
+      isActive = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }
 };
 
 // ---------------- NOTIFICATIONS CRUD ----------------
 export const getNotificationsDb = async (userId) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const notifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
     return notifs.filter(n => n.userId === userId);
   } else {
-    const q = query(collection(db, 'notifications'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const createNotificationDb = async (userId, title, message) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const notifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
     const newNotif = {
       id: 'notif_' + Math.random().toString(36).substr(2, 9),
@@ -398,19 +570,26 @@ export const createNotificationDb = async (userId, title, message) => {
     localStorage.setItem('mock_notifications', JSON.stringify(notifs));
     return newNotif;
   } else {
-    const docRef = await addDoc(collection(db, 'notifications'), {
+    const notif = toSnake({
+      id: 'notif_' + Math.random().toString(36).substr(2, 9),
       userId,
       title,
       message,
       read: false,
       createdAt: new Date().toISOString()
     });
-    return { id: docRef.id, userId, title, message, read: false };
+    const { data, error } = await supabase
+      .from('notifications')
+      .insert([notif])
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
   }
 };
 
 export const markNotificationReadDb = async (notifId) => {
-  if (isMockFirebase) {
+  if (isMockSupabase) {
     const notifs = JSON.parse(localStorage.getItem('mock_notifications') || '[]');
     const index = notifs.findIndex(n => n.id === notifId);
     if (index !== -1) {
@@ -418,6 +597,10 @@ export const markNotificationReadDb = async (notifId) => {
       localStorage.setItem('mock_notifications', JSON.stringify(notifs));
     }
   } else {
-    await updateDoc(doc(db, 'notifications', notifId), { read: true });
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notifId);
+    if (error) throw error;
   }
 };

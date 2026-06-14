@@ -1,13 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Retrieve Supabase URL and Anon Key from environment variables (Vite-specific)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const rawUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Supabase credentials are missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your env file.'
-  );
+// Determine if we should run in Mock mode
+export const isMockSupabase = 
+  !rawUrl || 
+  !rawKey || 
+  rawUrl.includes('your_supabase_project_url') || 
+  rawKey.includes('your_supabase_anon_key');
+
+const supabaseUrl = isMockSupabase ? 'https://placeholder-project.supabase.co' : rawUrl;
+const supabaseAnonKey = isMockSupabase ? 'placeholder-key' : rawKey;
+
+if (isMockSupabase) {
+  console.log('Running in Mock Supabase Mode (local storage fallback)');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
