@@ -289,17 +289,6 @@ export const MOCK_PRODUCTS = [
     rating: 4.8
   },
   {
-    id: 'p25',
-    name: 'Sweet Ripe Mango',
-    category: 'fruits',
-    price: 180,
-    weight: '1kg',
-    description: 'Delicious, sweet and fiberless ripe mangoes harvested from local farms.',
-    image: 'mango.jpg',
-    inStock: true,
-    rating: 4.9
-  },
-  {
     id: 'p26',
     name: 'Organic Papaya',
     category: 'fruits',
