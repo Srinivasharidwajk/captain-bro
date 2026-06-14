@@ -1,21 +1,31 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import splashImg from "../assets/images/splash.png";
+import { useAuth } from "../hooks/useAuth";
 
 function Splash() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
+  const handleNavigation = () => {
+    if (currentUser) {
+      navigate("/home");
+    } else {
+      navigate("/login");
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate("/home");
-    }, 9000); // 4 seconds duration
+      handleNavigation();
+    }, 4000); // 4 seconds duration to align with loading animation
     return () => clearTimeout(timer);
-  }, [navigate]);
+  }, [navigate, currentUser]);
 
   return (
     <div
       className="min-h-screen w-full flex items-center justify-center bg-[#0d0103] select-none overflow-hidden relative cursor-pointer"
-      onClick={() => navigate("/home")}
+      onClick={handleNavigation}
     >
       {/* 
         Single image container. By setting the image height to 108% and shifting it up by top-[-4%],
@@ -38,7 +48,7 @@ function Splash() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            navigate("/home");
+            handleNavigation();
           }}
           className="bg-black/35 hover:bg-black/55 text-white/95 text-[10px] font-black tracking-widest uppercase px-4 py-2 rounded-full border border-white/10 backdrop-blur-md transition-all active:scale-95 cursor-pointer shadow-lg"
         >

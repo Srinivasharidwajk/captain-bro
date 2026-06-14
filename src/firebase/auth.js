@@ -91,6 +91,41 @@ export const loginUser = async (email, password) => {
   }
 };
 
+export const loginWithPhone = async (phone) => {
+  if (isMockFirebase) {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const users = getMockUsers();
+    let user = users.find(u => u.phone === phone);
+    if (!user) {
+      user = {
+        uid: 'u_' + Math.random().toString(36).substr(2, 9),
+        email: `${phone}@captainbro.com`,
+        fullName: 'Customer ' + phone.slice(-4),
+        phone,
+        role: 'customer',
+        createdAt: new Date().toISOString()
+      };
+      users.push(user);
+      saveMockUsers(users);
+    }
+    localStorage.setItem('active_mock_user', JSON.stringify(user));
+    window.dispatchEvent(new Event('storage'));
+    return user;
+  } else {
+    // In production, fallback to retrieve profile by phone or create a new one
+    const newUser = {
+      uid: 'u_' + Math.random().toString(36).substr(2, 9),
+      email: `${phone}@captainbro.com`,
+      fullName: 'Customer ' + phone.slice(-4),
+      phone,
+      role: 'customer',
+      createdAt: new Date().toISOString()
+    };
+    await setDoc(doc(db, 'users', newUser.uid), newUser);
+    return newUser;
+  }
+};
+
 export const logoutUser = async () => {
   if (isMockFirebase) {
     localStorage.removeItem('active_mock_user');

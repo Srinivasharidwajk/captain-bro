@@ -4,7 +4,8 @@ import {
   registerUser, 
   logoutUser, 
   resetPassword, 
-  subscribeToAuth 
+  subscribeToAuth,
+  loginWithPhone 
 } from '../firebase/auth';
 
 export const AuthContext = createContext();
@@ -75,6 +76,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginPhone = async (phone) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const userProfile = await loginWithPhone(phone);
+      setCurrentUser(userProfile);
+      return userProfile;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const value = {
     currentUser,
     loading,
@@ -82,7 +98,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    resetPass
+    resetPass,
+    loginPhone
   };
 
   return (
