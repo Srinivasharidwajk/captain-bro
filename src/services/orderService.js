@@ -2,7 +2,8 @@ import {
   createOrderDb, 
   getOrdersDb, 
   updateOrderStatusDb,
-  updateOrderFieldsDb
+  updateOrderFieldsDb,
+  subscribeToOrdersDb
 } from '../supabase/database';
 
 export const createOrder = async (orderData) => {
@@ -19,4 +20,8 @@ export const updateOrderStatus = async (id, status, riderId = null) => {
 
 export const updateOrderFields = async (id, fields) => {
   return await updateOrderFieldsDb(id, fields);
+};
+
+export const subscribeToOrders = (callback) => {
+  return subscribeToOrdersDb(callback);
 };

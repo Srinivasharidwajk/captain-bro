@@ -604,3 +604,41 @@ export const markNotificationReadDb = async (notifId) => {
     if (error) throw error;
   }
 };
+
+export const subscribeToOrdersDb = (callback) => {
+  if (isMockSupabase) {
+    const handleStorageChange = (e) => {
+      if (e.key === 'mock_orders' || !e.key) {
+        const orders = JSON.parse(localStorage.getItem('mock_orders') || '[]');
+        callback(toCamel(orders));
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Initial load
+    const orders = JSON.parse(localStorage.getItem('mock_orders') || '[]');
+    callback(toCamel(orders));
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  } else {
+    // Initial load
+    getOrdersDb().then(callback).catch(console.error);
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('realtime-orders')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'orders'
+      }, async () => {
+        const orders = await getOrdersDb();
+        callback(orders);
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }
+};

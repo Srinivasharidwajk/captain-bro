@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { createOrder, getOrders, updateOrderStatus, updateOrderFields } from '../services/orderService';
+import { createOrder, getOrders, updateOrderStatus, updateOrderFields, subscribeToOrders } from '../services/orderService';
 
 export const OrderContext = createContext();
 
@@ -72,7 +72,10 @@ export const OrderProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    fetchOrders();
+    const unsubscribe = subscribeToOrders((data) => {
+      setOrders(data);
+    });
+    return () => unsubscribe();
   }, []);
 
   const value = {

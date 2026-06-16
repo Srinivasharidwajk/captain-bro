@@ -7,9 +7,23 @@ import { useCart } from '../../hooks/useCart';
 import { formatPrice } from '../../utils/formatPrice';
 import { FaStar, FaMinus, FaPlus, FaShieldAlt, FaPlay, FaTimes } from 'react-icons/fa';
 
-import chickenCurry from '../../assets/images/chicken-curry.png';
+import RSPMuttonCurry from "../../assets/images/RSPMuttonCurry.png";
+import RSPMuttonFry from "../../assets/images/RSPMuttonFry.png";
+import RSPMuttonPakora from "../../assets/images/RSPMuttonPakora.png";
+import RSPMuttonBiryani from "../../assets/images/RSPMuttonBiryani.png";
+import RSPFishPulusu from "../../assets/images/RSPFishPulusu.png";
+import RSPFishFry from "../../assets/images/RSPFishFry.png";
+import VeoChickenFry from "../../assets/videos/video1.mp4";
+
+import RSPPrawnsCurry from "../../assets/images/RSPPrawnsCurry.png";
+import RSPPrawnsFry from "../../assets/images/RSPPrawnsFry.png";
+import RSPPrawnsBiryani from "../../assets/images/RSPPrawnsBiryani.png";
+
+import ChickenBiryaniImg from '../../assets/images/RSPChickenBiryani.png';
+import chickenCurry from '../../assets/images/RSPChickenCurry.png';
+import chickenFry from '../../assets/images/RSPChickenFry.png';
 import rspChickenFry from '../../assets/images/RSPChickenFry.png';
-import rspChickenPakora from '../../assets/images/RSPChickenPakora.png';
+import ChickenPakora from '../../assets/images/RSPChickenPakora.png';
 import recipeVideoImg from '../../assets/images/recipe-video.png';
 import muttonCurryImg from '../../assets/images/mutton-curry.png';
 import koramanuFishImg from '../../assets/images/koramanu-fish.png';
@@ -167,94 +181,91 @@ const frequentlyBoughtItems = [
 const CATEGORY_RECIPES = {
   chicken: [
     {
-      name: "Telangana Naatu Kodi Pulusu (Country Chicken)",
+      name: "Special Chicken Curry",
       time: "45 Mins",
       difficulty: "Medium",
       image: chickenCurry
     },
     {
-      name: "Warangal Kodi Vepudu (Spicy Chicken Fry)",
-      time: "30 Mins",
-      difficulty: "Easy",
-      image: rspChickenFry
-    },
-    {
-      name: "Spicy Telangana Chicken Masala",
-      time: "40 Mins",
-      difficulty: "Medium",
-      image: rspChickenPakora
-    },
-    {
-      name: "Watch Step-by-Step Cooking Video 🎥",
+      name: "Special Chicken Biryani",
       time: "15 Mins Video",
       difficulty: "Easy",
-      image: recipeVideoImg
+      image: ChickenBiryaniImg
+    },
+    {
+      name: "Special Chicken Pakora",
+      time: "40 Mins",
+      difficulty: "Medium",
+      image: ChickenPakora
+    },
+    {
+      name: "Special Chicken Fry",
+      time: "30 Mins",
+      difficulty: "Easy",
+      image: chickenFry
     }
+
+
   ],
   mutton: [
     {
-      name: "Authentic Telangana Mutton Curry",
+      name: "Special Mutton Curry",
       time: "60 Mins",
       difficulty: "Medium",
-      image: muttonCurryImg
+      image: RSPMuttonCurry
     },
     {
-      name: "Warangal Wedding Special Mutton Dalcha",
-      time: "50 Mins",
-      difficulty: "Medium",
-      image: muttonCurryImg
-    },
-    {
-      name: "Telangana Special Talakaya Kura",
-      time: "70 Mins",
-      difficulty: "Hard",
-      image: muttonCurryImg
-    },
-    {
-      name: "Watch Step-by-Step Cooking Video 🎥",
+      name: "Special Mutton Biryani",
       time: "12 Mins Video",
       difficulty: "Easy",
-      image: recipeVideoImg
+      image: RSPMuttonBiryani
+    },
+    {
+      name: "Special Mutton Fry",
+      time: "50 Mins",
+      difficulty: "Medium",
+      image: RSPMuttonFry
+    },
+    {
+      name: "Special Mutton Pakora",
+      time: "70 Mins",
+      difficulty: "Hard",
+      image: RSPMuttonPakora
     }
+
   ],
   fish: [
     {
-      name: "Telangana Chepala Pulusu (Tamarind Gravy)",
+      name: "Telangana Fish Pulusu",
       time: "35 Mins",
       difficulty: "Medium",
-      image: koramanuFishImg
+      image: RSPFishPulusu
     },
     {
-      name: "Spicy Hanamkonda Fish Fry",
+      name: "Special Fish Fry",
       time: "25 Mins",
       difficulty: "Easy",
-      image: ravaFishImg
-    },
-    {
-      name: "Watch Step-by-Step Cooking Video 🎥",
-      time: "10 Mins Video",
-      difficulty: "Easy",
-      image: recipeVideoImg
+      image: RSPFishFry
     }
   ],
   prawns: [
     {
-      name: "Warangal Style Royyala Vepudu (Prawn Fry)",
+      name: "Special Prawns Curry",
       time: "25 Mins",
       difficulty: "Easy",
-      image: prawnsImg
+      image: RSPPrawnsCurry
     },
     {
-      name: "Spicy Royyala Masala Kura",
+      name: "Special Prawns Fry",
       time: "30 Mins",
       difficulty: "Easy",
-      image: prawnsImg
+      image: RSPPrawnsFry
     },
     {
-      name: "Watch Step-by-Step Cooking Video 🎥",
+      name: "Special PrawnsBiryani",
       time: "14 Mins Video",
       difficulty: "Easy",
-      image: recipeVideoImg
+      image: RSPPrawnsBiryani
     }
   ],
   vegetables: [
@@ -622,7 +633,7 @@ export const ProductDetails = () => {
           <div className="flex flex-col gap-3">
             <div className="flex flex-col text-left">
               <h3 className="text-sm font-extrabold text-neutral-dark">
-                Chef's Recipe Recommendations 🧑‍🍳
+                Recipes Recommendations 🧑‍🍳
               </h3>
               <p className="text-[10px] text-neutral-dark/50 font-semibold mt-0.5">
                 Easy, delicious ways to cook your fresh cuts
@@ -631,10 +642,10 @@ export const ProductDetails = () => {
 
             <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
               {recipes.map((recipe, idx) => (
-                <div key={idx} className="flex flex-col gap-2 flex-shrink-0 w-48 group">
+                <div key={idx} className="flex flex-col gap-2 flex-shrink-0 w-60 group">
                   <div
-                    onClick={() => setSelectedVideo('/recipe-video.mp4')}
-                    className="w-full h-28 bg-white border border-neutral-border rounded-xl overflow-hidden shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-300 cursor-pointer relative"
+                    onClick={() => setSelectedVideo((recipe.name === "Special Chicken Pakora" || recipe.name === "Special Chicken Fry") ? VeoChickenFry : '/recipe-video.mp4')}
+                    className="w-full h-28 bg-white border border-neutral-border rounded-md overflow-hidden shadow-xs  transition-all duration-300 cursor-pointer relative"
                   >
                     <img
                       src={getImageUrl(recipe.image)}

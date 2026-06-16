@@ -17,7 +17,9 @@ export const Orders = () => {
     fetchOrders();
   }, []);
 
-  const userOrders = orders.filter((o) => (o.customerId === currentUser?.uid || o.customerId === 'guest_user') && o.status !== 'pending_payment');
+  const userOrders = orders
+    .filter((o) => (o.customerId === currentUser?.uid || o.customerId === 'guest_user') && o.status !== 'pending_payment')
+    .sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
 
   const getStatusDetails = (status) => {
     const details = {
@@ -88,7 +90,7 @@ export const Orders = () => {
                     ORDER ID: {order.id.slice(-6).toUpperCase()}
                   </span>
                   <span className="text-[9px] text-neutral-dark/50 font-semibold mt-0.5">
-                    {formatDate(order.createdAt)}
+                    {formatDate(order.createdAt || order.created_at)}
                   </span>
                 </div>
                 

@@ -4,10 +4,11 @@ import { useAuth } from '../../hooks/useAuth';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 import { validateEmail } from '../../utils/validation';
+import { isMockSupabase } from '../../supabase/supabaseClient';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, loginPhone, error: authError } = useAuth();
+  const { login, loginPhone, sendPhoneOtp, error: authError } = useAuth();
   
   const [activeTab, setActiveTab] = useState('otp'); // 'otp' or 'email'
   
@@ -40,9 +41,13 @@ export const Login = () => {
 
     setSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800)); // simulate sending SMS
+      await sendPhoneOtp(phone);
       setOtpSent(true);
-      setOtpCodeMsg('Mock OTP sent successfully! Use demo code: 123456');
+      if (isMockSupabase) {
+        setOtpCodeMsg('Mock OTP sent successfully! Use demo code: 123456');
+      } else {
+        setOtpCodeMsg('OTP sent successfully to your mobile number!');
+      }
     } catch (err) {
       setLocalError(err.message || 'Failed to send OTP.');
     } finally {
@@ -55,14 +60,19 @@ export const Login = () => {
     setOtpError('');
     setLocalError('');
 
-    if (!otp || otp !== '123456') {
+    if (isMockSupabase && (!otp || otp !== '123456')) {
       setOtpError('Invalid OTP. Please enter 123456.');
+      return;
+    }
+
+    if (!isMockSupabase && (!otp || otp.length < 6)) {
+      setOtpError('Please enter a valid 6-digit OTP.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const user = await loginPhone(phone);
+      const user = await loginPhone(phone, otp);
       if (user.role === 'admin') {
         navigate('/admin');
       } else if (user.role === 'rider') {

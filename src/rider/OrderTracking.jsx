@@ -32,6 +32,7 @@ export const OrderTracking = () => {
   const [routeIndex, setRouteIndex] = useState(0);
   const [arrived, setArrived] = useState(false);
   const [checkedItems, setCheckedItems] = useState({});
+  const [amountCollectedConfirmed, setAmountCollectedConfirmed] = useState(false);
 
   const toggleCheckItem = (index) => {
     setCheckedItems(prev => ({
@@ -299,18 +300,59 @@ export const OrderTracking = () => {
           </>
         )}
 
-        {order.status === 'picked_up' && (
-          <>
-            <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-800 font-semibold flex items-center gap-2">
-              <FaClipboardList className="text-base text-amber-600" />
-              <span>Please collect cash of {formatPrice(order.total)} from the client on delivery (COD).</span>
-            </div>
-            <Button onClick={handleCompleteDelivery} loading={submitting} className="w-full flex gap-2 justify-center items-center py-3.5 bg-green-600 hover:bg-green-700">
-              <FaCheckCircle />
-              <span>Mark as Delivered</span>
-            </Button>
-          </>
-        )}
+        {order.status === 'picked_up' && (() => {
+          const isCod = order.paymentMethod?.toLowerCase() === 'cod';
+          return (
+            <>
+              {/* Payment details warning card */}
+              <div className={`p-4 rounded-2xl border text-xs font-semibold flex flex-col gap-2 ${
+                isCod 
+                  ? 'bg-amber-50/70 border-amber-200 text-amber-900' 
+                  : 'bg-green-50/70 border-green-200 text-green-950'
+              }`}>
+                <div className="flex items-center gap-2 font-extrabold">
+                  <FaClipboardList className={`text-base ${isCod ? 'text-amber-600' : 'text-green-600'}`} />
+                  <span>Payment Information</span>
+                </div>
+                <div className="flex flex-col gap-1 pl-6">
+                  <div className="flex justify-between">
+                    <span>Payment Method:</span>
+                    <span className="font-extrabold uppercase">{order.paymentMethod || 'COD'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-black mt-1">
+                    <span>{isCod ? 'Collect Cash:' : 'Paid Amount:'}</span>
+                    <span>{formatPrice(order.total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation Checkbox */}
+              <label className="flex items-start gap-3 p-4 bg-white border border-neutral-border rounded-2xl shadow-xs cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={amountCollectedConfirmed}
+                  onChange={(e) => setAmountCollectedConfirmed(e.target.checked)}
+                  className="w-5 h-5 rounded text-[#8B0000] focus:ring-[#8B0000] border-neutral-border accent-[#8B0000] mt-0.5"
+                />
+                <span className="text-xs font-bold text-neutral-dark leading-tight">
+                  {isCod 
+                    ? `I confirm that I have collected cash payment of ${formatPrice(order.total)} from the customer.`
+                    : `I confirm that I have successfully handed over the order package to the customer.`}
+                </span>
+              </label>
+
+              <Button 
+                onClick={handleCompleteDelivery} 
+                loading={submitting} 
+                disabled={!amountCollectedConfirmed}
+                className="w-full flex gap-2 justify-center items-center py-3.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <FaCheckCircle />
+                <span>Mark as Delivered</span>
+              </Button>
+            </>
+          );
+        })()}
 
         {order.status === 'delivered' && (
           <div className="p-4 bg-green-50 rounded-2xl border border-green-200 text-xs text-green-800 font-semibold flex items-center justify-center gap-2">

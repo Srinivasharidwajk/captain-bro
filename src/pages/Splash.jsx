@@ -18,7 +18,7 @@ function Splash() {
   useEffect(() => {
     const timer = setTimeout(() => {
       handleNavigation();
-    }, 4000); // 4 seconds duration to align with loading animation
+    }, 2500); // 2.5 seconds duration to align with loading animation
     return () => clearTimeout(timer);
   }, [navigate, currentUser]);
 
